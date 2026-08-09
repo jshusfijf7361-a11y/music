@@ -1,0 +1,8 @@
+{
+  "name": "Remix Aura Global Music Foundation",
+  "description": "World-class global music education, artist development, mentorship platform, and creative community.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
