@@ -6,6 +6,7 @@ import {
   Artist,
   Booking,
   UserProfile,
+  LocalUserAccount,
   EventItem,
   ResourceItem,
   Donation,
@@ -16,7 +17,6 @@ import {
   MOCK_ARTISTS,
   MOCK_EVENTS,
   MOCK_RESOURCES,
-  INITIAL_USER,
 } from '../data/mockData';
 
 interface Toast {
@@ -44,8 +44,35 @@ interface AppContextType {
   events: EventItem[];
   resources: ResourceItem[];
   
-  user: UserProfile;
-  setUser: React.Dispatch<React.SetStateAction<UserProfile>>;
+  // User Authentication & Profile
+  user: UserProfile | null;
+  setUser: React.Dispatch<React.SetStateAction<UserProfile | null>>;
+  isLoggedIn: boolean;
+  
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
+  authModalTab: 'signup' | 'signin';
+  setAuthModalTab: (tab: 'signup' | 'signin') => void;
+  openAuthModal: (tab?: 'signup' | 'signin') => void;
+  
+  signUpLocalUser: (data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    password: string;
+  }) => { success: boolean; error?: string };
+
+  signInLocalUser: (
+    email: string,
+    pass: string
+  ) => { success: boolean; error?: string };
+
+  logOutUser: () => void;
+  deleteUserAccount: () => void;
+  updateProfilePhoto: (dataUrl: string) => void;
+  removeProfilePhoto: () => void;
+  changeUserPassword: (currentPass: string, newPass: string) => { success: boolean; error?: string };
   
   // Modals & Search
   searchQuery: string;
@@ -83,6 +110,9 @@ interface AppContextType {
   setIsCipherAuthModalOpen: (open: boolean) => void;
   isCipherAuthenticated: boolean;
   setIsCipherAuthenticated: (auth: boolean) => void;
+  sessionToken: string | null;
+  setSessionToken: (token: string | null) => void;
+  cypherLogout: () => Promise<void>;
 
   partnerWaitlist: PartnerWaitlistEntry[];
   addPartnerWaitlistEntry: (entry: Omit<PartnerWaitlistEntry, 'id' | 'createdAt' | 'status'>) => void;
@@ -101,6 +131,27 @@ interface AppContextType {
   removeToast: (id: string) => void;
 }
 
+const GTF_ACCOUNTS_KEY = 'gtf_local_user_accounts';
+const GTF_SESSION_KEY = 'gtf_active_user_session';
+
+const getStoredAccounts = (): LocalUserAccount[] => {
+  try {
+    const saved = localStorage.getItem(GTF_ACCOUNTS_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {
+    console.error('Error reading local accounts', e);
+  }
+  return [];
+};
+
+const saveStoredAccounts = (accounts: LocalUserAccount[]) => {
+  try {
+    localStorage.setItem(GTF_ACCOUNTS_KEY, JSON.stringify(accounts));
+  } catch (e) {
+    console.error('Error saving local accounts', e);
+  }
+};
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -113,10 +164,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     else if (tab === 'vision') setActiveView('vision');
     else if (tab === 'mission') setActiveView('mission');
     else if (tab === 'founder') setActiveView('founders-chronicle');
-    else if (tab === 'board') setActiveView('board-of-directors');
-    else setActiveView('about');
+    else if (tab === 'structure') setActiveView('organizational-structure');
+    else setActiveView('about-foundation');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
   const [courses] = useState<Course[]>(MOCK_COURSES);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   
@@ -126,17 +178,173 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [events] = useState<EventItem[]>(MOCK_EVENTS);
   const [resources] = useState<ResourceItem[]>(MOCK_RESOURCES);
   
-  const [user, setUser] = useState<UserProfile>(() => {
-    const saved = localStorage.getItem('aura_user_profile');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+  // User Authentication State (Frontend-Only LocalStorage persistence)
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    try {
+      const activeId = localStorage.getItem(GTF_SESSION_KEY);
+      if (activeId) {
+        const accounts = getStoredAccounts();
+        const account = accounts.find((a) => a.id === activeId);
+        if (account) {
+          return {
+            id: account.id,
+            firstName: account.firstName,
+            lastName: account.lastName,
+            name: `${account.firstName} ${account.lastName}`,
+            email: account.email,
+            phone: account.phone || '',
+            role: account.role || 'Student',
+            avatar: account.avatarUrl || '',
+            country: account.country || 'Global',
+            selectedInterests: ['Music Production', 'Vocals'],
+            enrolledCourseIds: account.enrolledCourseIds || [],
+            courseProgress: account.courseProgress || {},
+            completedLessonIds: account.completedLessonIds || [],
+            savedResourceIds: account.savedResourceIds || [],
+            certificates: account.certificates || [],
+            bookings: account.bookings || [],
+            donations: account.donations || [],
+          };
+        }
+      }
+    } catch (e) {
+      console.error('Error loading initial session', e);
     }
-    return INITIAL_USER;
+    return null;
   });
 
-  useEffect(() => {
-    localStorage.setItem('aura_user_profile', JSON.stringify(user));
-  }, [user]);
+  const isLoggedIn = !!user;
+
+  // Auth Modal State
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<'signup' | 'signin'>('signup');
+
+  const openAuthModal = (tab: 'signup' | 'signin' = 'signup') => {
+    setAuthModalTab(tab);
+    setIsAuthModalOpen(true);
+  };
+
+  const signUpLocalUser = (data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    password: string;
+  }) => {
+    const accounts = getStoredAccounts();
+    const cleanEmail = data.email.trim().toLowerCase();
+    const existing = accounts.find((a) => a.email.toLowerCase() === cleanEmail);
+
+    if (existing) {
+      return { success: false, error: 'An account with this email already exists. Please sign in.' };
+    }
+
+    const newAccount: LocalUserAccount = {
+      id: `usr-${Date.now()}`,
+      firstName: data.firstName.trim(),
+      lastName: data.lastName.trim(),
+      email: cleanEmail,
+      phone: data.phone.trim(),
+      password: data.password,
+      avatarUrl: '',
+      role: 'Student',
+      createdAt: new Date().toISOString(),
+      enrolledCourseIds: [],
+      courseProgress: {},
+      completedLessonIds: [],
+      savedResourceIds: [],
+      certificates: [],
+      bookings: [],
+      donations: [],
+    };
+
+    saveStoredAccounts([...accounts, newAccount]);
+    return { success: true };
+  };
+
+  const signInLocalUser = (email: string, pass: string) => {
+    const accounts = getStoredAccounts();
+    const cleanEmail = email.trim().toLowerCase();
+    const account = accounts.find((a) => a.email.toLowerCase() === cleanEmail);
+
+    if (!account || account.password !== pass) {
+      return { success: false, error: 'Invalid email or password.' };
+    }
+
+    localStorage.setItem(GTF_SESSION_KEY, account.id);
+    const loggedInProfile: UserProfile = {
+      id: account.id,
+      firstName: account.firstName,
+      lastName: account.lastName,
+      name: `${account.firstName} ${account.lastName}`,
+      email: account.email,
+      phone: account.phone || '',
+      role: account.role || 'Student',
+      avatar: account.avatarUrl || '',
+      country: account.country || 'Global',
+      selectedInterests: ['Music Production', 'Vocals'],
+      enrolledCourseIds: account.enrolledCourseIds || [],
+      courseProgress: account.courseProgress || {},
+      completedLessonIds: account.completedLessonIds || [],
+      savedResourceIds: account.savedResourceIds || [],
+      certificates: account.certificates || [],
+      bookings: account.bookings || [],
+      donations: account.donations || [],
+    };
+
+    setUser(loggedInProfile);
+    addToast(`Welcome back, ${account.firstName}!`, 'success');
+    return { success: true };
+  };
+
+  const logOutUser = () => {
+    localStorage.removeItem(GTF_SESSION_KEY);
+    setUser(null);
+    setIsDashboardOpen(false);
+    addToast('You have been logged out.', 'info');
+  };
+
+  const deleteUserAccount = () => {
+    if (!user) return;
+    const accounts = getStoredAccounts();
+    const filtered = accounts.filter((a) => a.id !== user.id);
+    saveStoredAccounts(filtered);
+    localStorage.removeItem(GTF_SESSION_KEY);
+    localStorage.removeItem('aura_user_profile');
+    setUser(null);
+    setIsDashboardOpen(false);
+    addToast('Your account and local data have been permanently deleted.', 'info');
+  };
+
+  const updateProfilePhoto = (dataUrl: string) => {
+    if (!user) return;
+    setUser((prev) => (prev ? { ...prev, avatar: dataUrl } : null));
+    const accounts = getStoredAccounts();
+    const updated = accounts.map((a) => (a.id === user.id ? { ...a, avatarUrl: dataUrl } : a));
+    saveStoredAccounts(updated);
+    addToast('Profile photo updated successfully!', 'success');
+  };
+
+  const removeProfilePhoto = () => {
+    if (!user) return;
+    setUser((prev) => (prev ? { ...prev, avatar: '' } : null));
+    const accounts = getStoredAccounts();
+    const updated = accounts.map((a) => (a.id === user.id ? { ...a, avatarUrl: '' } : a));
+    saveStoredAccounts(updated);
+    addToast('Profile photo removed.', 'info');
+  };
+
+  const changeUserPassword = (currentPass: string, newPass: string) => {
+    if (!user) return { success: false, error: 'No active user session.' };
+    const accounts = getStoredAccounts();
+    const account = accounts.find((a) => a.id === user.id);
+    if (!account || account.password !== currentPass) {
+      return { success: false, error: 'Current password is incorrect.' };
+    }
+    const updated = accounts.map((a) => (a.id === user.id ? { ...a, password: newPass } : a));
+    saveStoredAccounts(updated);
+    return { success: true };
+  };
 
   // Search & Modal states
   const [searchQuery, setSearchQuery] = useState('');
@@ -151,16 +359,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
   const [isCipherAuthModalOpen, setIsCipherAuthModalOpen] = useState(false);
-  const [isCipherAuthenticated, setIsCipherAuthenticatedState] = useState<boolean>(() => {
-    return localStorage.getItem('gtf_cipher_auth') === 'true';
-  });
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const isCipherAuthenticated = !!sessionToken;
 
   const setIsCipherAuthenticated = (auth: boolean) => {
-    setIsCipherAuthenticatedState(auth);
-    if (auth) {
-      localStorage.setItem('gtf_cipher_auth', 'true');
-    } else {
-      localStorage.removeItem('gtf_cipher_auth');
+    if (!auth) {
+      setSessionToken(null);
+    }
+  };
+
+  const cypherLogout = async () => {
+    try {
+      if (sessionToken) {
+        await fetch('/api/cypher/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`,
+          },
+        });
+      }
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      setSessionToken(null);
+      setIsAdminOpen(false);
+      setIsCipherAuthModalOpen(false);
     }
   };
 
@@ -236,18 +460,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const enrollInCourse = (courseId: string) => {
+    if (!user) {
+      openAuthModal('signup');
+      addToast('Please sign in or create an account to enroll in courses.', 'info');
+      return;
+    }
+
     if (!user.enrolledCourseIds.includes(courseId)) {
-      setUser((prev) => ({
+      const updatedEnrolled = [...user.enrolledCourseIds, courseId];
+      const updatedProgress = { ...user.courseProgress, [courseId]: 0 };
+
+      setUser((prev) => (prev ? {
         ...prev,
-        enrolledCourseIds: [...prev.enrolledCourseIds, courseId],
-        courseProgress: { ...prev.courseProgress, [courseId]: 0 },
-      }));
+        enrolledCourseIds: updatedEnrolled,
+        courseProgress: updatedProgress,
+      } : null));
+
+      const accounts = getStoredAccounts();
+      const updated = accounts.map((a) => a.id === user.id ? {
+        ...a,
+        enrolledCourseIds: updatedEnrolled,
+        courseProgress: updatedProgress,
+      } : a);
+      saveStoredAccounts(updated);
+
       addToast('Successfully enrolled in course!', 'success');
     }
   };
 
   const completeLesson = (courseId: string, lessonId: string) => {
+    if (!user) {
+      openAuthModal('signup');
+      return;
+    }
+
     setUser((prev) => {
+      if (!prev) return null;
       const alreadyCompleted = prev.completedLessonIds.includes(lessonId);
       const updatedCompleted = alreadyCompleted
         ? prev.completedLessonIds
@@ -275,12 +523,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addToast(`🎉 Congratulations! You completed "${course.title}" and earned your Certificate!`, 'success');
       }
 
-      return {
+      const updatedUser: UserProfile = {
         ...prev,
         completedLessonIds: updatedCompleted,
         courseProgress: { ...prev.courseProgress, [courseId]: progress },
         certificates: updatedCerts,
       };
+
+      const accounts = getStoredAccounts();
+      const updated = accounts.map((a) => (a.id === prev.id ? {
+        ...a,
+        completedLessonIds: updatedCompleted,
+        courseProgress: { ...a.courseProgress, [courseId]: progress },
+        certificates: updatedCerts,
+      } : a));
+      saveStoredAccounts(updated);
+
+      return updatedUser;
     });
   };
 
@@ -291,10 +550,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
       status: 'Confirmed',
     };
-    setUser((prev) => ({
-      ...prev,
-      bookings: [newBooking, ...prev.bookings],
-    }));
+
+    if (user) {
+      const updatedBookings = [newBooking, ...user.bookings];
+      setUser((prev) => (prev ? {
+        ...prev,
+        bookings: updatedBookings,
+      } : null));
+
+      const accounts = getStoredAccounts();
+      const updated = accounts.map((a) => (a.id === user.id ? { ...a, bookings: updatedBookings } : a));
+      saveStoredAccounts(updated);
+    }
+
     addToast(`Your private session with ${bookingData.artistName} is confirmed!`, 'success');
   };
 
@@ -302,15 +570,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newDonation: Donation = {
       id: `DON-${Date.now().toString().slice(-6)}`,
       amountEUR,
-      donorName: user.name,
-      donorEmail: user.email,
+      donorName: user ? user.name : 'Anonymous Supporter',
+      donorEmail: user ? user.email : 'supporter@globaltalent.org',
       message,
       date: new Date().toISOString().split('T')[0],
     };
-    setUser((prev) => ({
-      ...prev,
-      donations: [newDonation, ...prev.donations],
-    }));
+
+    if (user) {
+      const updatedDonations = [newDonation, ...user.donations];
+      setUser((prev) => (prev ? {
+        ...prev,
+        donations: updatedDonations,
+      } : null));
+
+      const accounts = getStoredAccounts();
+      const updated = accounts.map((a) => (a.id === user.id ? { ...a, donations: updatedDonations } : a));
+      saveStoredAccounts(updated);
+    }
+
     addToast(`Thank you for your generous €${amountEUR} donation to music education!`, 'success');
   };
 
@@ -332,6 +609,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         resources,
         user,
         setUser,
+        isLoggedIn,
+        isAuthModalOpen,
+        setIsAuthModalOpen,
+        authModalTab,
+        setAuthModalTab,
+        openAuthModal,
+        signUpLocalUser,
+        signInLocalUser,
+        logOutUser,
+        deleteUserAccount,
+        updateProfilePhoto,
+        removeProfilePhoto,
+        changeUserPassword,
         searchQuery,
         setSearchQuery,
         isSearchOpen,
@@ -358,6 +648,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsCipherAuthModalOpen,
         isCipherAuthenticated,
         setIsCipherAuthenticated,
+        sessionToken,
+        setSessionToken,
+        cypherLogout,
         partnerWaitlist,
         addPartnerWaitlistEntry,
         updatePartnerWaitlistStatus,

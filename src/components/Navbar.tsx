@@ -10,12 +10,13 @@ import {
   User,
   Menu,
   X,
-  ShieldCheck,
   ChevronDown,
   Check,
   ArrowRight,
   Search,
-  Lock
+  Sparkles,
+  LogOut,
+  LayoutDashboard,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -26,26 +27,102 @@ export const Navbar: React.FC = () => {
     setActiveView,
     navigateToAboutTab,
     setIsDashboardOpen,
-    setIsAdminOpen,
     setIsSearchOpen,
     setIsCipherAuthModalOpen,
-    isCipherAuthenticated,
+    isCipherAuthModalOpen,
+    user,
+    openAuthModal,
+    logOutUser,
   } = useApp();
 
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isAboutCollapsed, setIsAboutCollapsed] = useState(false);
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const [isAboutDropdownOpen, setIsAboutDropdownOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const langDropdownRef = useRef<HTMLDivElement>(null);
   const aboutDropdownRef = useRef<HTMLDivElement>(null);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target as Node)) {
+        setIsProfileDropdownOpen(false);
+      }
+      if (langDropdownRef.current && !langDropdownRef.current.contains(e.target as Node)) {
+        setIsLangDropdownOpen(false);
+      }
+      if (aboutDropdownRef.current && !aboutDropdownRef.current.contains(e.target as Node)) {
+        setIsAboutDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Hidden 10-click logo counter (active ONLY on homepage)
+  const [logoClicks, setLogoClicks] = useState(0);
+  const lastClickTimeRef = useRef<number>(0);
+
+  // Reset click count when leaving homepage
+  useEffect(() => {
+    if (activeView !== 'home') {
+      setLogoClicks(0);
+    }
+  }, [activeView]);
+
+  // Reset click count when login modal closes
+  useEffect(() => {
+    if (!isCipherAuthModalOpen) {
+      setLogoClicks(0);
+    }
+  }, [isCipherAuthModalOpen]);
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const now = Date.now();
+    const INACTIVITY_TIMEOUT_MS = 3500;
+
+    if (activeView === 'home') {
+      const isQuickClick = (now - lastClickTimeRef.current) <= INACTIVITY_TIMEOUT_MS;
+      const nextCount = isQuickClick ? logoClicks + 1 : 1;
+      lastClickTimeRef.current = now;
+
+      if (nextCount >= 10) {
+        setLogoClicks(0);
+        setIsCipherAuthModalOpen(true);
+      } else {
+        setLogoClicks(nextCount);
+      }
+    } else {
+      setLogoClicks(0);
+      setActiveView('home');
+      setIsMobileMenuOpen(false);
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const isAboutView = [
+    'about',
+    'about-foundation',
+    'vision',
+    'mission',
+    'founders-chronicle',
+    'organizational-structure'
+  ].includes(activeView);
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
+      setIsAboutCollapsed(isAboutView && window.scrollY > 180);
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [isAboutView]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -71,11 +148,10 @@ export const Navbar: React.FC = () => {
   ];
 
   const aboutSubPages: { key: AboutTab; title: string; subtitle: string }[] = [
-    { key: 'foundation', title: 'About Foundation', subtitle: 'Core humanitarian mission' },
-    { key: 'vision', title: 'Vision', subtitle: 'Our ultimate aim for humanity' },
-    { key: 'mission', title: 'Mission', subtitle: 'Sustainable action & relief' },
-    { key: 'founder', title: 'Founders’ Chronicle', subtitle: 'History and values journal' },
-    { key: 'board', title: 'Board of Directors', subtitle: 'Sovereign advisory committee' },
+    { key: 'foundation', title: 'About Foundation', subtitle: 'Discovering & nurturing young talent' },
+    { key: 'vision', title: 'Vision', subtitle: 'Global ecosystem across continents' },
+    { key: 'mission', title: 'Mission', subtitle: 'Discover, nurture, educate, empower' },
+    { key: 'founder', title: "Founders' Chronicle", subtitle: 'Where the vision began' },
     { key: 'structure', title: 'Organizational Structure', subtitle: 'Internal action workflows' },
   ];
 
@@ -88,17 +164,20 @@ export const Navbar: React.FC = () => {
   return (
     <header
       className={`sticky top-0 z-40 w-full transition-all duration-300 ${
-        isScrolled
-          ? 'bg-white/90 dark:bg-black/80 backdrop-blur-md shadow-lg py-3 border-b border-neutral-200 dark:border-white/10'
-          : 'bg-white/80 dark:bg-black/40 backdrop-blur-md py-4 border-b border-neutral-200 dark:border-white/10'
+        isAboutCollapsed
+          ? '-translate-y-full opacity-0 pointer-events-none'
+          : isScrolled
+          ? 'translate-y-0 opacity-100 bg-white/90 dark:bg-black/80 backdrop-blur-md shadow-lg py-3 border-b border-neutral-200 dark:border-white/10'
+          : 'translate-y-0 opacity-100 bg-white/80 dark:bg-black/40 backdrop-blur-md py-4 border-b border-neutral-200 dark:border-white/10'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         
         {/* Brand Logo */}
         <button
-          onClick={() => handleNavClick('home')}
+          onClick={handleLogoClick}
           className="flex items-center gap-3.5 group text-left cursor-pointer p-0 border-0 bg-transparent"
+          aria-label="The Global Talents Foundation Home"
         >
           <img
             src="https://i.imgur.com/vUWitAs.png"
@@ -254,7 +333,7 @@ export const Navbar: React.FC = () => {
           <button
             onClick={() => setIsSearchOpen(true)}
             className="w-9 h-9 rounded-full border border-neutral-300 dark:border-white/10 flex items-center justify-center cursor-pointer bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-800 dark:text-white/80 transition-colors"
-            title="Search Courses, Artists & Cipher Gate"
+            title="Search Courses, Mentors & Resources"
           >
             <Search className="w-4 h-4 text-amber-500" />
           </button>
@@ -268,29 +347,78 @@ export const Navbar: React.FC = () => {
             {theme === 'dark' ? <Sun className="w-4 h-4 text-[#D4AF37]" /> : <Moon className="w-4 h-4 text-neutral-700" />}
           </button>
 
-          {/* User Account */}
-          <button
-            onClick={() => setIsDashboardOpen(true)}
-            className="w-9 h-9 rounded-full border border-neutral-300 dark:border-white/10 flex items-center justify-center cursor-pointer bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-800 dark:text-white/80 transition-colors"
-            title="User Account & Dashboard"
-          >
-            <User className="w-4 h-4" />
-          </button>
+          {/* User Account or Get Started Button */}
+          {!user ? (
+            <button
+              onClick={() => openAuthModal('signup')}
+              className="px-4 py-2 rounded-full bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-bold text-xs uppercase tracking-wider shadow-md shadow-amber-500/20 transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5"
+              title="Get Started"
+            >
+              <Sparkles className="w-3.5 h-3.5 fill-neutral-950" />
+              <span>GET STARTED</span>
+            </button>
+          ) : (
+            <div className="relative" ref={profileDropdownRef}>
+              <button
+                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                className="flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-full border border-neutral-300 dark:border-white/15 bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 transition-all cursor-pointer"
+                title="User Profile & Menu"
+              >
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="w-7 h-7 rounded-full object-cover border border-amber-500 shadow-sm"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-neutral-950 font-black text-xs flex items-center justify-center shadow-sm">
+                    {(user.firstName || user.name || 'U').trim().charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200 max-w-[80px] truncate hidden xl:inline-block">
+                  {user.firstName || user.name.split(' ')[0]}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />
+              </button>
 
-          {/* Cipher Admin Gate */}
-          <button
-            onClick={() => {
-              if (isCipherAuthenticated) {
-                setIsAdminOpen(true);
-              } else {
-                setIsCipherAuthModalOpen(true);
-              }
-            }}
-            className="w-9 h-9 rounded-full border border-amber-500/30 flex items-center justify-center cursor-pointer bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 transition-all shadow-sm"
-            title="Cipher Sovereign Admin Gate"
-          >
-            <Lock className="w-4 h-4" />
-          </button>
+              {isProfileDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-56 p-2 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-2xl z-50 text-xs animate-in fade-in zoom-in-95">
+                  <div className="px-3 py-2.5 border-b border-neutral-100 dark:border-neutral-800/80 mb-1">
+                    <div className="font-bold text-neutral-900 dark:text-white truncate">
+                      {user.firstName} {user.lastName}
+                    </div>
+                    <div className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 truncate">
+                      {user.email}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      setIsDashboardOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-neutral-700 dark:text-neutral-200 hover:bg-amber-500/10 hover:text-amber-500 transition-colors cursor-pointer text-left font-medium"
+                  >
+                    <User className="w-4 h-4 text-amber-500" />
+                    <span>My Profile</span>
+                  </button>
+
+                  <div className="my-1 border-t border-neutral-100 dark:border-neutral-800/80" />
+
+                  <button
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      logOutUser();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer text-left font-medium"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Log Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Mobile Right Controls */}
@@ -381,27 +509,65 @@ export const Navbar: React.FC = () => {
             })}
 
             <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 flex flex-col gap-2.5">
-              <button
-                onClick={() => {
-                  setIsDashboardOpen(true);
-                  setIsMobileMenuOpen(false);
-                }}
-                className="py-3 rounded-xl bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow"
-              >
-                <User className="w-4 h-4" />
-                <span>My Account</span>
-              </button>
+              {!user ? (
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    openAuthModal('signup');
+                  }}
+                  className="py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                >
+                  <Sparkles className="w-4 h-4 fill-neutral-950" />
+                  <span>GET STARTED</span>
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+                    {user.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt={user.name}
+                        className="w-10 h-10 rounded-full object-cover border border-amber-500 shadow-sm"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-neutral-950 font-black text-sm flex items-center justify-center shadow-sm">
+                        {(user.firstName || user.name || 'U').trim().charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-neutral-900 dark:text-white truncate text-xs">
+                        {user.firstName} {user.lastName}
+                      </div>
+                      <div className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 truncate">
+                        {user.email}
+                      </div>
+                    </div>
+                  </div>
 
-              <button
-                onClick={() => {
-                  setIsAdminOpen(true);
-                  setIsMobileMenuOpen(false);
-                }}
-                className="text-center py-2 text-xs font-mono text-neutral-500 hover:text-amber-500 flex items-center justify-center gap-1"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Foundation Admin Portal</span>
-              </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        setIsDashboardOpen(true);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="py-2.5 rounded-xl bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow cursor-pointer"
+                    >
+                      <User className="w-3.5 h-3.5" />
+                      <span>My Profile</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        logOutUser();
+                      }}
+                      className="py-2.5 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Log Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

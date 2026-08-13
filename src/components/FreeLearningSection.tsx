@@ -63,8 +63,8 @@ export const FreeLearningSection: React.FC = () => {
         {/* Courses Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredCourses.map((course) => {
-            const isEnrolled = user.enrolledCourseIds.includes(course.id);
-            const progress = user.courseProgress[course.id] || 0;
+            const isEnrolled = user?.enrolledCourseIds?.includes(course.id) || false;
+            const progress = user?.courseProgress?.[course.id] || 0;
 
             return (
               <div

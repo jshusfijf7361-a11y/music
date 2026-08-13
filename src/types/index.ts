@@ -165,10 +165,33 @@ export interface PartnerWaitlistEntry {
   status: 'Pending' | 'Contacted' | 'Approved' | 'Declined';
 }
 
+export interface LocalUserAccount {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  password?: string;
+  avatarUrl?: string; // Base64 data URL
+  country?: string;
+  role?: 'Student' | 'Artist' | 'Admin';
+  createdAt: string;
+  enrolledCourseIds: string[];
+  courseProgress: Record<string, number>;
+  completedLessonIds: string[];
+  savedResourceIds: string[];
+  certificates: { courseId: string; courseTitle: string; issueDate: string; certificateId: string }[];
+  bookings: Booking[];
+  donations: Donation[];
+}
+
 export interface UserProfile {
   id: string;
+  firstName: string;
+  lastName: string;
   name: string;
   email: string;
+  phone: string;
   role: 'Student' | 'Artist' | 'Admin';
   avatar: string;
   country: string;
@@ -182,10 +205,11 @@ export interface UserProfile {
   donations: Donation[];
 }
 
-export type AboutTab = 'foundation' | 'vision' | 'mission' | 'founder' | 'board' | 'structure';
+export type AboutTab = 'foundation' | 'vision' | 'mission' | 'founder' | 'structure';
 
 export type ActiveView = 
   | 'home' 
+  | 'foundation-academy-primacies'
   | 'academy' 
   | 'courses' 
   | 'artists' 
@@ -197,7 +221,7 @@ export type ActiveView =
   | 'vision'
   | 'mission'
   | 'founders-chronicle'
-  | 'board-of-directors'
+  | 'organizational-structure'
   | 'donate' 
   | 'dashboard' 
   | 'admin';

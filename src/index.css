@@ -12,6 +12,79 @@
   }
 }
 
+/* ==========================================================
+   Mobile-Only Scrollbar Rules (@media max-width: 768px)
+   (Desktop UI scrollbars remain untouched and default)
+   ========================================================== */
+@media (max-width: 768px) {
+  /* 1. Mobile Home Page: Completely Hide Page Scrollbar */
+  html.home-page-no-scrollbar,
+  body.home-page-no-scrollbar {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  html.home-page-no-scrollbar::-webkit-scrollbar,
+  body.home-page-no-scrollbar::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  /* 2. Mobile Other Pages & Containers: Tiny and Smaller Scrollbars */
+  html:not(.home-page-no-scrollbar),
+  body:not(.home-page-no-scrollbar) {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(212, 175, 55, 0.45) transparent;
+  }
+
+  html:not(.home-page-no-scrollbar)::-webkit-scrollbar,
+  body:not(.home-page-no-scrollbar)::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+
+  html:not(.home-page-no-scrollbar)::-webkit-scrollbar-track,
+  body:not(.home-page-no-scrollbar)::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  html:not(.home-page-no-scrollbar)::-webkit-scrollbar-thumb,
+  body:not(.home-page-no-scrollbar)::-webkit-scrollbar-thumb {
+    background: rgba(212, 175, 55, 0.5);
+    border-radius: 9999px;
+  }
+
+  /* Container scrollbars on mobile */
+  *:not(html):not(body) {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(212, 175, 55, 0.45) transparent;
+  }
+
+  *:not(html):not(body)::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+
+  *:not(html):not(body)::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *:not(html):not(body)::-webkit-scrollbar-thumb {
+    background: rgba(212, 175, 55, 0.5);
+    border-radius: 9999px;
+  }
+}
+
+/* Utility to hide scrollbar on specific containers if needed */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
 /* Custom Sleek Interface Utilities */
 .text-gold {
   color: #D4AF37;
@@ -39,4 +112,5 @@
 .sleek-card:hover {
   border-color: rgba(212, 175, 55, 0.4);
 }
+
 

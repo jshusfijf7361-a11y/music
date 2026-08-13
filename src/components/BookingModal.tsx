@@ -31,8 +31,8 @@ export const BookingModal: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>('2026-09-02');
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('15:00 UTC');
   
-  const [userName, setUserName] = useState<string>(user.name || '');
-  const [userEmail, setUserEmail] = useState<string>(user.email || '');
+  const [userName, setUserName] = useState<string>(user?.name || '');
+  const [userEmail, setUserEmail] = useState<string>(user?.email || '');
   const [notes, setNotes] = useState<string>('');
 
   const [cardNumber, setCardNumber] = useState<string>('•••• •••• •••• 4242');

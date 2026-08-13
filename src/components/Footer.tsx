@@ -2,13 +2,13 @@ import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { useApp } from '../context/AppContext';
-import { Globe, Sun, Moon, Lock, ShieldCheck } from 'lucide-react';
+import { Globe, Sun, Moon } from 'lucide-react';
 import { LanguageCode } from '../types';
 
 export const Footer: React.FC = () => {
   const { language, setLanguageCode, languages } = useLanguage();
   const { theme, toggleTheme } = useTheme();
-  const { setActiveView, navigateToAboutTab, setIsCipherAuthModalOpen, setIsAdminOpen, isCipherAuthenticated } = useApp();
+  const { setActiveView, navigateToAboutTab } = useApp();
 
   return (
     <footer className="bg-neutral-900 dark:bg-black text-neutral-300 dark:text-white/70 border-t border-neutral-800 dark:border-white/5 pt-16 pb-12 transition-colors">
@@ -171,12 +171,12 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <button onClick={() => navigateToAboutTab('founder')} className="hover:text-white transition-colors cursor-pointer">
-                  Founders’ Chronicle
+                  Founders' Chronicle
                 </button>
               </li>
               <li>
-                <button onClick={() => navigateToAboutTab('board')} className="hover:text-white transition-colors cursor-pointer">
-                  Board of Directors
+                <button onClick={() => navigateToAboutTab('structure')} className="hover:text-white transition-colors cursor-pointer">
+                  Organizational Structure
                 </button>
               </li>
             </ul>
@@ -193,20 +193,6 @@ export const Footer: React.FC = () => {
             <span className="hover:text-white transition-colors cursor-pointer">Privacy Policy</span>
             <span className="hover:text-white transition-colors cursor-pointer">Terms of Service</span>
             <span className="hover:text-white transition-colors cursor-pointer">Grant Transparency</span>
-            <button
-              onClick={() => {
-                if (isCipherAuthenticated) {
-                  setIsAdminOpen(true);
-                } else {
-                  setIsCipherAuthModalOpen(true);
-                }
-              }}
-              className="text-amber-500 hover:text-amber-400 transition-colors cursor-pointer flex items-center gap-1 font-mono lowercase tracking-normal"
-              title="Cipher Admin Gate"
-            >
-              <Lock className="w-3 h-3 text-amber-500" />
-              <span>cipher</span>
-            </button>
           </div>
         </div>
 

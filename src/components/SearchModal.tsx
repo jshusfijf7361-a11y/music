@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Search, X, BookOpen, User, Calendar, FileText, ArrowRight, Lock, ShieldCheck } from 'lucide-react';
+import { Search, X, BookOpen, User, Calendar, FileText, ArrowRight } from 'lucide-react';
 
 export const SearchModal: React.FC = () => {
   const {
@@ -14,15 +14,11 @@ export const SearchModal: React.FC = () => {
     resources,
     setSelectedCourse,
     setSelectedArtist,
-    setIsCipherAuthModalOpen,
-    setIsAdminOpen,
-    isCipherAuthenticated,
   } = useApp();
 
   if (!isSearchOpen) return null;
 
   const query = searchQuery.toLowerCase().trim();
-  const showCipherGate = !query || query.includes('cipher') || query.includes('admin') || query.includes('partner');
 
   const matchingCourses = query
     ? courses.filter((c) => c.title.toLowerCase().includes(query) || c.category.toLowerCase().includes(query))
@@ -61,42 +57,6 @@ export const SearchModal: React.FC = () => {
 
         {/* Results Container */}
         <div className="mt-4 space-y-6 max-h-[60vh] overflow-y-auto pr-1">
-          
-          {/* Cipher Admin Gate Entry */}
-          {showCipherGate && (
-            <div>
-              <div className="text-[10px] font-mono font-bold uppercase text-amber-500 tracking-widest mb-2 flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5" />
-                Sovereign System Access
-              </div>
-              <div
-                onClick={() => {
-                  setIsSearchOpen(false);
-                  if (isCipherAuthenticated) {
-                    setIsAdminOpen(true);
-                  } else {
-                    setIsCipherAuthModalOpen(true);
-                  }
-                }}
-                className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 hover:border-amber-500 transition-all cursor-pointer flex items-center justify-between text-xs"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-neutral-950 flex items-center justify-center font-bold">
-                    <ShieldCheck className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-white flex items-center gap-2">
-                      <span>Cipher Executive Admin Dashboard</span>
-                      <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-mono text-[9px]">L1 AUTH</span>
-                    </div>
-                    <div className="text-[10px] text-neutral-400 font-mono">Manage partner waitlist, courses & system logs</div>
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-amber-500" />
-              </div>
-            </div>
-          )}
-          
           {/* Courses */}
           {matchingCourses.length > 0 && (
             <div>

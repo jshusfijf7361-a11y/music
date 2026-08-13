@@ -18,44 +18,44 @@ export const MissionSection: React.FC = () => {
             
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-6">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>FOUNDATION MISSION</span>
+              <span>FOUNDATION PHILOSOPHY</span>
             </div>
 
             <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] text-neutral-900 dark:text-neutral-50">
-              {t('mission.title', 'Music Should Be Accessible To Everyone.')}
+              {t('mission.title', 'Talent Exists Everywhere. Opportunity Does Not.')}
             </h2>
 
             <p className="mt-6 text-base sm:text-lg text-neutral-600 dark:text-neutral-300 leading-relaxed">
-              {t('mission.desc', 'The Global Talents Foundation exists to remove financial and geographic barriers to world-class music education. We empower creative voices from every corner of the planet through free courses, artist mentorship, and professional career development.')}
+              {t('mission.desc', 'GLOBAL TALENTS FOUNDATION exists to help close that gap. A young person’s circumstances should never determine whether they have access to knowledge, mentorship, training, exposure, or the opportunity to develop their creative potential across music, dance, performing arts, visual arts, and culture.')}
             </p>
 
             {/* Core Values / Pillars */}
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm">
                 <Globe2 className="w-6 h-6 text-amber-500 mb-2" />
-                <h4 className="text-sm font-bold">100% Free Access</h4>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Zero tuition fees or hidden paywalls for core courses.</p>
+                <h4 className="text-sm font-bold">Discover & Educate</h4>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Providing accessible education and technical training for creative minds.</p>
               </div>
 
               <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm">
                 <ShieldCheck className="w-6 h-6 text-amber-500 mb-2" />
-                <h4 className="text-sm font-bold">Industry Mentors</h4>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Learn directly from Grammy winners & legends.</p>
+                <h4 className="text-sm font-bold">Nurture & Mentor</h4>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Connecting emerging artists with credible, experienced industry leaders.</p>
               </div>
 
               <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm">
                 <HeartHandshake className="w-6 h-6 text-amber-500 mb-2" />
-                <h4 className="text-sm font-bold">Equipment Grants</h4>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Funding software & studio gear for talented youth.</p>
+                <h4 className="text-sm font-bold">Empower & Promote</h4>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Creating platforms and global pathways to celebrate creative excellence.</p>
               </div>
             </div>
 
             <div className="mt-8 flex flex-wrap gap-4 items-center">
               <button
                 onClick={() => setActiveView('about')}
-                className="px-6 py-3.5 rounded-full bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-950 font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:opacity-90 transition-opacity"
+                className="px-6 py-3.5 rounded-full bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-950 font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer"
               >
-                <span>Our Story & Philosophy</span>
+                <span>Discover Our Story & Mission</span>
                 <ArrowUpRight className="w-4 h-4" />
               </button>
             </div>

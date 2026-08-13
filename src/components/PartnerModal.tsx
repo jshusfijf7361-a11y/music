@@ -251,7 +251,7 @@ export const PartnerModal: React.FC = () => {
             <div className="space-y-2">
               <h2 className="text-2xl font-black text-white">Application Received!</h2>
               <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed max-w-md mx-auto">
-                Thank you, <span className="text-amber-400 font-bold">{name}</span>! Your details have been recorded and submitted to the <span className="text-amber-400 font-mono font-bold">Cipher Admin Dashboard</span>.
+                Thank you, <span className="text-amber-400 font-bold">{name}</span>! Your details have been recorded and submitted to the <span className="text-amber-400 font-semibold">Global Partnerships Team</span>.
               </p>
             </div>
 
@@ -260,7 +260,7 @@ export const PartnerModal: React.FC = () => {
               <div className="text-amber-400 font-bold">Name: {name}</div>
               <div className="text-neutral-300">Phone: {phone}</div>
               {organization && <div className="text-neutral-300">Org: {organization}</div>}
-              <div className="text-[10px] text-emerald-400 pt-1">✓ Status: Transmitted to Cipher Admin Portal</div>
+              <div className="text-[10px] text-emerald-400 pt-1">✓ Status: Transmitted to Global Partnerships Team</div>
             </div>
 
             <button

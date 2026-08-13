@@ -590,10 +590,13 @@ export const MOCK_TESTIMONIALS: Testimonial[] = [
 
 export const INITIAL_USER: UserProfile = {
   id: 'usr-default',
+  firstName: 'Alex',
+  lastName: 'Rivera',
   name: 'Alex Rivera',
   email: 'alex.rivera@globaltalent.org',
+  phone: '+1 (555) 019-2834',
   role: 'Student',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+  avatar: '',
   country: 'Spain',
   selectedInterests: ['Music Production', 'Vocals', 'Songwriting', 'Music Business'],
   enrolledCourseIds: ['course-1', 'course-2'],

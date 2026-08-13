@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useApp } from './context/AppContext';
 
 // Layout Components
@@ -17,11 +17,14 @@ import { SuccessStoriesSection } from './components/SuccessStoriesSection';
 import { ResourcesSection } from './components/ResourcesSection';
 import { NewsletterSection } from './components/NewsletterSection';
 import { AboutSection } from './components/AboutSection';
+import { PrimaciesSection } from './components/PrimaciesSection';
+import { PrimaciesGalleryPage } from './components/PrimaciesGalleryPage';
 // Modals & Widgets
 import { CourseDetailModal } from './components/CourseDetailModal';
 import { ArtistProfileModal } from './components/ArtistProfileModal';
 import { BookingModal } from './components/BookingModal';
 import { UserDashboardModal } from './components/UserDashboardModal';
+import { AuthModal } from './components/AuthModal';
 import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { PartnerModal } from './components/PartnerModal';
 import { CipherAuthModal } from './components/CipherAuthModal';
@@ -31,6 +34,20 @@ import { ToastContainer } from './components/ToastContainer';
 
 export function App() {
   const { activeView } = useApp();
+
+  useEffect(() => {
+    if (activeView === 'home') {
+      document.documentElement.classList.add('home-page-no-scrollbar');
+      document.body.classList.add('home-page-no-scrollbar');
+    } else {
+      document.documentElement.classList.remove('home-page-no-scrollbar');
+      document.body.classList.remove('home-page-no-scrollbar');
+    }
+    return () => {
+      document.documentElement.classList.remove('home-page-no-scrollbar');
+      document.body.classList.remove('home-page-no-scrollbar');
+    };
+  }, [activeView]);
 
   return (
     <div className="min-h-screen bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100 flex flex-col font-sans selection:bg-amber-500 selection:text-neutral-950 transition-colors duration-300">
@@ -46,16 +63,13 @@ export function App() {
         {activeView === 'home' && (
           <>
             <Hero />
-            <MissionSection />
-            <AcademySection />
-            <FreeLearningSection />
-            <ArtistsSection />
+            <PrimaciesSection />
             <ImpactSection />
-            <EventsSection />
-            <SuccessStoriesSection />
-            <ResourcesSection />
-            <NewsletterSection />
           </>
+        )}
+
+        {activeView === 'foundation-academy-primacies' && (
+          <PrimaciesGalleryPage />
         )}
 
         {activeView === 'courses' && (
@@ -96,10 +110,9 @@ export function App() {
           activeView === 'vision' ||
           activeView === 'mission' ||
           activeView === 'founders-chronicle' ||
-          activeView === 'board-of-directors') && (
-          <div className="pt-20">
+          activeView === 'organizational-structure') && (
+          <div className="pt-0">
             <AboutSection />
-            <ImpactSection />
           </div>
         )}
       </main>
@@ -112,6 +125,7 @@ export function App() {
       <ArtistProfileModal />
       <BookingModal />
       <UserDashboardModal />
+      <AuthModal />
       <AdminDashboardModal />
       <PartnerModal />
       <CipherAuthModal />

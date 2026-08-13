@@ -26,8 +26,8 @@ export const CourseDetailModal: React.FC = () => {
   if (!selectedCourse) return null;
 
   const currentLesson = selectedCourse.lessons[activeLessonIndex] || selectedCourse.lessons[0];
-  const isLessonCompleted = user.completedLessonIds.includes(currentLesson.id);
-  const progress = user.courseProgress[selectedCourse.id] || 0;
+  const isLessonCompleted = user?.completedLessonIds?.includes(currentLesson.id) || false;
+  const progress = user?.courseProgress?.[selectedCourse.id] || 0;
   const hasCertificate = progress >= 100;
 
   const handleToggleComplete = () => {

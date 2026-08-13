@@ -27,7 +27,9 @@ import {
   Cpu,
   LogOut,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  Loader2,
+  Save
 } from 'lucide-react';
 
 export const AdminDashboardModal: React.FC = () => {
@@ -36,7 +38,9 @@ export const AdminDashboardModal: React.FC = () => {
     setIsAdminOpen,
     isCipherAuthenticated,
     setIsCipherAuthenticated,
-    setIsCipherAuthModalOpen,
+    sessionToken,
+    setSessionToken,
+    cypherLogout,
     courses,
     artists,
     user,
@@ -52,10 +56,20 @@ export const AdminDashboardModal: React.FC = () => {
   const [partnerSearch, setPartnerSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Contacted' | 'Approved' | 'Declined'>('All');
 
-  // Inline Cipher Auth Login State (if opened directly)
+  // Inline Cipher Auth Login State (if opened directly without token)
   const [cipherUserInput, setCipherUserInput] = useState('');
   const [cipherPassInput, setCipherPassInput] = useState('');
   const [cipherAuthError, setCipherAuthError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Security / Change Credentials State
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [securityError, setSecurityError] = useState('');
+  const [securitySuccess, setSecuritySuccess] = useState('');
+  const [isUpdatingCreds, setIsUpdatingCreds] = useState(false);
 
   // New Course Form State
   const [newTitle, setNewTitle] = useState('');
@@ -64,20 +78,103 @@ export const AdminDashboardModal: React.FC = () => {
   if (!isAdminOpen) return null;
 
   // Handle Cipher Authentication Submission
-  const handleCipherLogin = (e: React.FormEvent) => {
+  const handleCipherLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const userClean = cipherUserInput.trim().toLowerCase();
-    const passClean = cipherPassInput.trim();
+    if (isLoggingIn) return;
 
-    const isUserValid = userClean === 'cipher_admin' || userClean === 'admin';
-    const isPassValid = passClean === 'Cipher2026!' || passClean === 'cipher2026' || passClean === 'Cipher2026';
+    const userClean = cipherUserInput.trim();
+    const passClean = cipherPassInput;
 
-    if (isUserValid && isPassValid) {
-      setIsCipherAuthenticated(true);
-      setCipherAuthError('');
-      addToast('★ Cipher Admin Access Granted.', 'success');
-    } else {
-      setCipherAuthError('ACCESS DENIED: Invalid Cipher Administrator ID or Security Key.');
+    if (!userClean || !passClean) {
+      setCipherAuthError('Please enter username and password.');
+      return;
+    }
+
+    setIsLoggingIn(true);
+    setCipherAuthError('');
+
+    try {
+      const res = await fetch('/api/cypher/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: userClean, password: passClean }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.sessionToken) {
+        setSessionToken(data.sessionToken);
+        setIsCipherAuthenticated(true);
+        setCipherAuthError('');
+        addToast('Cipher administrator session authenticated.', 'success');
+      } else {
+        setCipherAuthError(data.error || 'Access Denied: Invalid credentials.');
+      }
+    } catch (err) {
+      setCipherAuthError('Authentication server unreachable.');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleExit = async () => {
+    await cypherLogout();
+    setIsAdminOpen(false);
+  };
+
+  const handleChangeCredentials = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isUpdatingCreds) return;
+
+    setSecurityError('');
+    setSecuritySuccess('');
+
+    if (!currentPassword || !newUsername.trim() || !newPassword || !confirmPassword) {
+      setSecurityError('All fields are required.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setSecurityError('New password and confirmation do not match.');
+      return;
+    }
+
+    if (newPassword.length < 4) {
+      setSecurityError('New password must be at least 4 characters long.');
+      return;
+    }
+
+    setIsUpdatingCreds(true);
+
+    try {
+      const res = await fetch('/api/cypher/change-credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newUsername: newUsername.trim(),
+          newPassword,
+          confirmNewPassword: confirmPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSecuritySuccess(data.message || 'Credentials updated successfully.');
+        addToast('Security credentials updated successfully on server.', 'success');
+        setCurrentPassword('');
+        setNewUsername('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        setSecurityError(data.error || 'Failed to update credentials.');
+      }
+    } catch (err) {
+      setSecurityError('Error contacting credential server.');
+    } finally {
+      setIsUpdatingCreds(false);
     }
   };
 
@@ -159,21 +256,19 @@ export const AdminDashboardModal: React.FC = () => {
           <div className="flex items-center gap-3">
             {isCipherAuthenticated && (
               <button
-                onClick={() => {
-                  setIsCipherAuthenticated(false);
-                  addToast('Cipher session locked.', 'info');
-                }}
+                onClick={handleExit}
                 className="px-3.5 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-800 text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                title="Lock Cipher Session"
+                title="End Administrator Session"
               >
                 <LogOut className="w-3.5 h-3.5 text-amber-500" />
-                <span>Lock Session</span>
+                <span>Exit & Invalidate Session</span>
               </button>
             )}
 
             <button
-              onClick={() => setIsAdminOpen(false)}
+              onClick={handleExit}
               className="p-2.5 rounded-2xl bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              title="Close Dashboard"
             >
               <X className="w-5 h-5" />
             </button>
@@ -190,28 +285,20 @@ export const AdminDashboardModal: React.FC = () => {
             <div className="space-y-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-mono font-bold uppercase tracking-widest">
                 <Terminal className="w-3.5 h-3.5" />
-                <span>Restricted Cipher Gate</span>
+                <span>Restricted Access</span>
               </div>
               <h3 className="text-2xl font-black text-white">
-                Cipher Credentials Required
+                Authentication Required
               </h3>
               <p className="text-xs text-neutral-400">
-                You must authenticate with true administrator credentials to access the Cipher dashboard and partner waitlist ledger.
+                You must authenticate with administrator credentials to access the control panel.
               </p>
             </div>
 
-            {/* Hint Box */}
-            <div className="p-3.5 rounded-2xl bg-neutral-900 border border-neutral-800 text-left text-[11px] font-mono space-y-1">
-              <div className="text-amber-500 font-bold uppercase text-[10px] flex items-center gap-1">
-                <Cpu className="w-3.5 h-3.5" /> Authorized True Credentials:
-              </div>
-              <div className="text-neutral-300">Username: <span className="text-amber-400 font-bold">cipher_admin</span></div>
-              <div className="text-neutral-300">Passcode: <span className="text-amber-400 font-bold">Cipher2026!</span></div>
-            </div>
-
             {cipherAuthError && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/40 text-red-400 text-xs font-mono font-medium">
-                {cipherAuthError}
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/40 text-red-400 text-xs font-mono font-medium flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <span>{cipherAuthError}</span>
               </div>
             )}
 
@@ -221,7 +308,7 @@ export const AdminDashboardModal: React.FC = () => {
                 required
                 value={cipherUserInput}
                 onChange={(e) => { setCipherUserInput(e.target.value); setCipherAuthError(''); }}
-                placeholder="Username (e.g. cipher_admin)"
+                placeholder="Username"
                 className="w-full px-4 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 font-medium"
               />
               <input
@@ -229,14 +316,22 @@ export const AdminDashboardModal: React.FC = () => {
                 required
                 value={cipherPassInput}
                 onChange={(e) => { setCipherPassInput(e.target.value); setCipherAuthError(''); }}
-                placeholder="Passcode (e.g. Cipher2026!)"
+                placeholder="Password"
                 className="w-full px-4 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 font-medium"
               />
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-sans font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 cursor-pointer transition-all"
+                disabled={isLoggingIn}
+                className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-neutral-950 font-sans font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 cursor-pointer transition-all flex items-center justify-center gap-2"
               >
-                Authenticate & Access Cipher Dashboard
+                {isLoggingIn ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Verifying Credentials...</span>
+                  </>
+                ) : (
+                  <span>Authenticate & Access Dashboard</span>
+                )}
               </button>
             </form>
           </div>
@@ -634,28 +729,158 @@ export const AdminDashboardModal: React.FC = () => {
               </div>
             )}
 
-            {/* TAB 6: CIPHER AUDIT */}
+            {/* TAB 6: CIPHER AUDIT & SECURITY SETTINGS */}
             {activeTab === 'cipher_security' && (
-              <div className="space-y-4 font-mono text-xs">
-                <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-2">
-                  <div className="text-amber-400 font-bold text-sm">Cipher Security & Encryption Overview</div>
-                  <div className="text-neutral-400 text-xs">
-                    Security Level: <span className="text-emerald-400 font-bold">Level 1 Sovereign Administrator</span>
+              <div className="space-y-6 text-xs">
+                {/* Active Session Overview */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-1.5 font-mono">
+                    <div className="text-[10px] uppercase text-neutral-400 font-bold">Session Authorization</div>
+                    <div className="text-emerald-400 font-bold text-sm flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Authenticated Session</span>
+                    </div>
+                    <div className="text-neutral-500 text-[10px]">Server-side token verification active</div>
                   </div>
-                  <div className="text-neutral-400 text-xs">
-                    Active Cipher Key: <span className="text-amber-400">CIPHER-GTF-2026-ACTIVE</span>
+
+                  <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-1.5 font-mono">
+                    <div className="text-[10px] uppercase text-neutral-400 font-bold">Security Scheme</div>
+                    <div className="text-amber-400 font-bold text-sm flex items-center gap-1.5">
+                      <Lock className="w-4 h-4" />
+                      <span>Salted Scrypt Hash</span>
+                    </div>
+                    <div className="text-neutral-500 text-[10px]">Timing-safe byte comparison</div>
                   </div>
-                  <div className="text-neutral-400 text-xs">
-                    Storage Driver: Local Encrypted AppContext State & LocalStorage Persistence
+
+                  <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-1.5 font-mono">
+                    <div className="text-[10px] uppercase text-neutral-400 font-bold">Session Expiry</div>
+                    <div className="text-white font-bold text-sm flex items-center gap-1.5">
+                      <Clock className="w-4 h-4" />
+                      <span>Auto-Lock on Inactivity</span>
+                    </div>
+                    <div className="text-neutral-500 text-[10px]">Full invalidation on exit</div>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-2">
-                  <div className="text-white font-bold">Admin Actions Audit</div>
-                  <div className="text-[11px] text-neutral-400 space-y-1">
-                    <div>• Partner waitlist modification permissions enabled.</div>
-                    <div>• Course creation & deletion permissions enabled.</div>
-                    <div>• Mentorship session auditing permissions active.</div>
+                {/* Change Administrator Credentials Form */}
+                <div className="p-6 rounded-3xl bg-neutral-900/90 border border-neutral-800 space-y-5">
+                  <div className="flex items-center justify-between gap-4 border-b border-neutral-800 pb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <KeyRound className="w-4 h-4 text-amber-500" />
+                        <span>Update Administrator Credentials</span>
+                      </h3>
+                      <p className="text-neutral-400 text-xs mt-0.5">
+                        Change the sovereign administrator login username and password. Changes persist to the secure server database.
+                      </p>
+                    </div>
+                  </div>
+
+                  {securityError && (
+                    <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/40 text-red-400 text-xs font-mono font-medium flex items-center gap-2">
+                      <ShieldAlert className="w-4 h-4 shrink-0" />
+                      <span>{securityError}</span>
+                    </div>
+                  )}
+
+                  {securitySuccess && (
+                    <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 text-xs font-mono font-medium flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>{securitySuccess}</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleChangeCredentials} className="space-y-4 font-mono">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] uppercase font-bold text-neutral-400">
+                          Current Security Password <span className="text-amber-500">*</span>
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          value={currentPassword}
+                          onChange={(e) => { setCurrentPassword(e.target.value); setSecurityError(''); setSecuritySuccess(''); }}
+                          placeholder="Current password"
+                          className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white placeholder-neutral-600 focus:outline-none focus:border-amber-500 text-xs"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] uppercase font-bold text-neutral-400">
+                          New Administrator Username <span className="text-amber-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={newUsername}
+                          onChange={(e) => { setNewUsername(e.target.value); setSecurityError(''); setSecuritySuccess(''); }}
+                          placeholder="e.g. cipher"
+                          className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white placeholder-neutral-600 focus:outline-none focus:border-amber-500 text-xs"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] uppercase font-bold text-neutral-400">
+                          New Security Password <span className="text-amber-500">*</span>
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          value={newPassword}
+                          onChange={(e) => { setNewPassword(e.target.value); setSecurityError(''); setSecuritySuccess(''); }}
+                          placeholder="New password"
+                          className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white placeholder-neutral-600 focus:outline-none focus:border-amber-500 text-xs"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] uppercase font-bold text-neutral-400">
+                          Confirm New Security Password <span className="text-amber-500">*</span>
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          value={confirmPassword}
+                          onChange={(e) => { setConfirmPassword(e.target.value); setSecurityError(''); setSecuritySuccess(''); }}
+                          placeholder="Confirm new password"
+                          className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white placeholder-neutral-600 focus:outline-none focus:border-amber-500 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={isUpdatingCreds}
+                        className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-neutral-950 font-sans font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 flex items-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
+                      >
+                        {isUpdatingCreds ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Updating Credentials...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4" />
+                            <span>Save New Credentials</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Audit Trail */}
+                <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-2 font-mono text-[11px]">
+                  <div className="text-amber-400 font-bold uppercase text-[10px] flex items-center gap-1.5">
+                    <Terminal className="w-3.5 h-3.5" />
+                    <span>Security Directives & Audit Trail</span>
+                  </div>
+                  <div className="text-neutral-400 space-y-1">
+                    <div>• Public website navigation, menus, and footers contain zero visible administrative entry points.</div>
+                    <div>• All administrator operations require a signed, server-authenticated bearer session token.</div>
+                    <div>• Closing or locking the dashboard immediately invalidates the active server session.</div>
                   </div>
                 </div>
               </div>

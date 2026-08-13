@@ -52,9 +52,6 @@ export const ImpactSection: React.FC = () => {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-4">
-            ★ MEASURABLE MISSION
-          </div>
           <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-white">
             {t('impact.title', 'Our Global Impact')}
           </h2>
